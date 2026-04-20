@@ -14,8 +14,6 @@ def repetition_ratio(text: str) -> tuple[int, int, float]:
         return 0, 0, 0.0
 
     trigrams = list(zip(words, words[1:], words[2:]))
-    if not trigrams:
-        return 0, 0, 0.0
     repeated = len(trigrams) - len(set(trigrams))
     return repeated, len(trigrams), repeated / len(trigrams)
 
@@ -123,7 +121,7 @@ def main() -> int:
         f"({high_ratio:.1%})"
     )
 
-    if low_ratio <= high_ratio:
+    if low_ratio < high_ratio:
         print(
             "\nTip: If repetition is not obvious, try a lower --low-temperature "
             "(e.g. 0.05) or larger --max-new-tokens."
