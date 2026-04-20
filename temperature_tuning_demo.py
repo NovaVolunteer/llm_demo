@@ -14,6 +14,8 @@ def repetition_ratio(text: str) -> tuple[int, int, float]:
         return 0, 0, 0.0
 
     trigrams = list(zip(words, words[1:], words[2:]))
+    if not trigrams:
+        return 0, 0, 0.0
     repeated = len(trigrams) - len(set(trigrams))
     return repeated, len(trigrams), repeated / len(trigrams)
 

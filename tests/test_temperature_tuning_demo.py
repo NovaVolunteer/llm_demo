@@ -16,6 +16,14 @@ class RepetitionRatioTests(unittest.TestCase):
         self.assertEqual(total, 3)
         self.assertEqual(ratio, 0.0)
 
+    def test_short_or_non_word_text_returns_zeroes(self):
+        for text in ("", "help others", "!!! ###"):
+            with self.subTest(text=text):
+                repeated, total, ratio = repetition_ratio(text)
+                self.assertEqual(repeated, 0)
+                self.assertEqual(total, 0)
+                self.assertEqual(ratio, 0.0)
+
 
 if __name__ == "__main__":
     unittest.main()
