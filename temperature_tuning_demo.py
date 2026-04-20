@@ -30,6 +30,7 @@ def generate(
 ) -> str:
     seed_setter(seed)
     inputs = tokenizer(prompt, return_tensors="pt")
+    input_len = inputs["input_ids"].shape[1]
     with torch_module.no_grad():
         output = model.generate(
             **inputs,
@@ -38,8 +39,18 @@ def generate(
             temperature=temperature,
             pad_token_id=tokenizer.eos_token_id,
         )
-    decoded = tokenizer.decode(output[0], skip_special_tokens=True)
-    return decoded[len(prompt) :].strip() if decoded.startswith(prompt) else decoded
+    new_tokens = output[0][input_len:]
+    if len(new_tokens) == 0:
+        return ""
+    return tokenizer.decode(new_tokens, skip_special_tokens=True)
+
+
+def display_text(text: str) -> str:
+    """Return readable output, even when generation is only whitespace/special tokens."""
+    stripped = text.strip()
+    if stripped:
+        return stripped
+    return "[No visible text generated at this temperature/seed.]"
 
 
 def main() -> int:
@@ -48,18 +59,24 @@ def main() -> int:
     )
     parser.add_argument(
         "--model",
-        default="sshleifer/tiny-gpt2",
-        help="Small free model from Hugging Face Hub (default: sshleifer/tiny-gpt2)",
+        default="distilgpt2",
+        help="Small free model from Hugging Face Hub (default: distilgpt2)",
     )
     parser.add_argument(
         "--prompt",
         default="A volunteer coordinator gives this pep talk to the team:",
         help="Prompt to continue",
     )
-    parser.add_argument("--low-temperature", type=float, default=0.1)
-    parser.add_argument("--high-temperature", type=float, default=0.9)
-    parser.add_argument("--max-new-tokens", type=int, default=80)
+    parser.add_argument("--low-temperature", type=float, default=0.4)
+    parser.add_argument("--high-temperature", type=float, default=1.5)
+    parser.add_argument("--max-new-tokens", type=int, default=120)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--high-seed",
+        type=int,
+        default=None,
+        help="Optional seed for the higher-temperature run (default: seed + 1)",
+    )
     args = parser.parse_args()
 
     try:
@@ -90,6 +107,7 @@ def main() -> int:
         args.max_new_tokens,
         args.seed,
     )
+    high_seed = args.high_seed if args.high_seed is not None else args.seed + 1
     high_text = generate(
         model,
         tokenizer,
@@ -98,7 +116,7 @@ def main() -> int:
         args.prompt,
         args.high_temperature,
         args.max_new_tokens,
-        args.seed,
+        high_seed,
     )
 
     low_repeat, low_total, low_ratio = repetition_ratio(low_text)
@@ -108,14 +126,16 @@ def main() -> int:
     print(args.prompt)
 
     print(f"\n--- Low temperature ({args.low_temperature}) ---")
-    print(low_text)
+    print(f"Seed: {args.seed}")
+    print(display_text(low_text))
     print(
         f"Repetition score: {low_repeat}/{low_total} repeated trigrams "
         f"({low_ratio:.1%})"
     )
 
     print(f"\n--- Higher temperature ({args.high_temperature}) ---")
-    print(high_text)
+    print(f"Seed: {high_seed}")
+    print(display_text(high_text))
     print(
         f"Repetition score: {high_repeat}/{high_total} repeated trigrams "
         f"({high_ratio:.1%})"
